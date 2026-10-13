@@ -1,0 +1,186 @@
+/* =====================================================
+   SMARTQ - ANIMATIONS & VISUAL EFFECTS (load AFTER style.css)
+   ===================================================== */
+
+@keyframes fxPageIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fxRise { from { opacity: 0; transform: translateY(24px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes fxFloat { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-22px) rotate(6deg); } }
+@keyframes fxBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes fxWave { 0%,60%,100% { transform: rotate(0); } 10%,30% { transform: rotate(16deg); } 20%,40% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+@keyframes fxFlip { 0%,40% { transform: rotate(0); } 60%,100% { transform: rotate(180deg); } }
+@keyframes fxSwing { 0%,100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+@keyframes fxSpin { to { transform: rotate(360deg); } }
+@keyframes fxGlow { 0%,100% { text-shadow: 0 0 0 rgba(var(--accent-rgb),0); } 50% { text-shadow: 0 0 26px rgba(var(--accent-rgb),.5); } }
+@keyframes fxRing { 0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb),.45); } 100% { box-shadow: 0 0 0 12px rgba(var(--accent-rgb),0); } }
+@keyframes fxRingBlue { 0% { box-shadow: 0 0 0 0 rgba(40,120,168,.5); } 100% { box-shadow: 0 0 0 10px rgba(40,120,168,0); } }
+@keyframes fxBg { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes fxShine { to { left: 140%; } }
+@keyframes fxBlink { 50% { opacity: .2; } }
+@keyframes fxBlob { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,-30px) scale(1.18); } }
+@keyframes fxShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@keyframes fxConfetti { 0% { transform: translate3d(0,-10vh,0) rotate(0); opacity: 1; } 100% { transform: translate3d(var(--dx),110vh,0) rotate(720deg); opacity: .9; } }
+
+
+/* ---------- PAGE + ENTRANCE ---------- */
+
+body { animation: fxPageIn .5s ease; }
+
+.card, .stat-card, .service-card, .appointment-card, .queue-info, .auth-card {
+    animation: fxRise .6s cubic-bezier(.2,.8,.2,1) backwards;
+}
+
+:is(.stats-grid, .grid-4, .grid-2, .queue-info-grid, #recentAppointments, #historyList) > :nth-child(2) { animation-delay: .08s; }
+:is(.stats-grid, .grid-4, .grid-2, .queue-info-grid, #recentAppointments, #historyList) > :nth-child(3) { animation-delay: .16s; }
+:is(.stats-grid, .grid-4, .grid-2, .queue-info-grid, #recentAppointments, #historyList) > :nth-child(4) { animation-delay: .24s; }
+:is(#recentAppointments, #historyList) > :nth-child(n+5) { animation-delay: .32s; }
+
+
+/* ---------- HOVER EFFECTS ---------- */
+
+.stat-card { position: relative; overflow: hidden; transition: .25s; }
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(var(--accent-rgb),.14); }
+.stat-card::before {
+    content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 3px;
+    background: linear-gradient(90deg, #28796d, #7fd1c1);
+    transform: scaleX(0); transform-origin: left; transition: .4s;
+}
+.stat-card:hover::before { transform: scaleX(1); }
+
+.card { transition: box-shadow .3s; }
+.card:hover { box-shadow: 0 10px 30px rgba(20,40,50,.09); }
+
+.appointment-card { transition: .25s; }
+.appointment-card:hover { transform: translateX(5px); border-color: var(--primary); }
+
+.service-icon { font-size: 22px; transition: .3s; }
+.service-card:hover .service-icon { transform: scale(1.15) rotate(-8deg); background: var(--primary-light); }
+
+.queue-row { transition: background .2s; }
+.queue-row:hover { background: #f7fbfa; }
+
+
+/* ---------- BUTTONS ---------- */
+
+.btn { position: relative; overflow: hidden; }
+.btn::after {
+    content: ""; position: absolute; top: 0; left: -70%; width: 50%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.4), transparent);
+    transform: skewX(-20deg); pointer-events: none;
+}
+.btn:hover::after { animation: fxShine .7s; }
+.btn:active { transform: scale(.96); }
+.btn-primary { background: linear-gradient(135deg, #28796d, #36a08f); }
+
+
+/* ---------- NAVBAR ---------- */
+
+.navbar { background: rgba(255,255,255,.92); backdrop-filter: blur(8px); }
+.nav-logo-mark { animation: fxRing 2.4s infinite; }
+.nav-link { position: relative; transition: .2s; }
+.nav-link::after {
+    content: ""; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 2px;
+    background: var(--primary); transform: scaleX(0); transition: .25s;
+}
+.nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+.avatar { transition: .3s; }
+.avatar:hover { transform: rotate(360deg) scale(1.1); }
+
+
+/* ---------- LOGIN PAGE ---------- */
+
+.auth-page {
+    position: relative; overflow: hidden;
+    background: linear-gradient(120deg, #dff3ee, #f8fafb, #e3f0fa, #e5f2ef);
+    background-size: 300% 300%;
+    animation: fxBg 14s ease infinite;
+}
+.auth-wrapper { position: relative; z-index: 2; }
+.brand-mark { animation: fxRing 2.4s infinite; }
+.tab { transition: .25s; }
+.fx-blob { position: absolute; border-radius: 50%; filter: blur(50px); opacity: .5; pointer-events: none; animation: fxBlob 12s ease-in-out infinite; }
+
+
+/* ---------- STICKERS (floating emoji) ---------- */
+
+.fx-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.auth-page .fx-bg { position: absolute; z-index: 1; }
+.fx-sticker {
+    position: absolute; font-size: 36px; opacity: .55;
+    animation: fxFloat 7s ease-in-out infinite;
+    filter: drop-shadow(0 6px 8px rgba(0,0,0,.12));
+}
+
+.fx-title-sticker { display: inline-block; margin-left: 10px; transform-origin: 70% 70%; }
+.fx-wave { animation: fxWave 2.5s infinite; }
+.fx-bounce { animation: fxBob 1.6s ease-in-out infinite; }
+.fx-flip { animation: fxFlip 3s ease-in-out infinite; }
+.fx-swing { animation: fxSwing 2.2s ease-in-out infinite; }
+.fx-spin { animation: fxSpin 4s linear infinite; }
+
+
+/* ---------- HERO BANNER + ILLUSTRATION ---------- */
+
+.fx-hero {
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 26px 30px; margin-bottom: 28px; border-radius: 16px; color: #fff;
+    background: linear-gradient(120deg, #1e6258, #28796d, #3fae9c, #28796d);
+    background-size: 300% 300%;
+    animation: fxRise .6s cubic-bezier(.2,.8,.2,1) backwards, fxBg 10s ease infinite;
+}
+.fx-hero h2 { font-size: 26px; margin-bottom: 6px; }
+.fx-hero p { opacity: .92; font-size: 14px; }
+.fx-illus { width: 260px; max-width: 40%; flex-shrink: 0; }
+.fx-illus-panel { background: linear-gradient(135deg, #28796d, #3fae9c); border-radius: 16px; padding: 10px 24px; margin-bottom: 18px; }
+.fx-illus-panel .fx-illus { display: block; margin: 0 auto; width: 100%; max-width: 250px; }
+
+.fx-p { animation: fxBob 3s ease-in-out infinite; }
+.fx-p.p2 { animation-delay: .4s; }
+.fx-p.p3 { animation-delay: .8s; }
+.fx-ticket { animation: fxBob 2.4s ease-in-out infinite; }
+.fx-hand { transform-origin: 50px 35px; animation: fxSpin 4s linear infinite; }
+
+
+/* ---------- QUEUE, BADGES, EMPTY STATES ---------- */
+
+.current-token { animation: fxGlow 2.4s ease-in-out infinite; }
+.badge-waiting::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; margin: auto 6px auto 0; animation: fxBlink 1.2s infinite;
+}
+.badge-called { animation: fxRingBlue 1.6s infinite; }
+.empty-icon { display: inline-block; font-size: 52px; animation: fxFloat 4s ease-in-out infinite; }
+
+
+/* ---------- NOTIFICATION + CONFETTI ---------- */
+
+.notification { border-left: 5px solid #ffd166; }
+.notification.fx-shake { animation: fxShake .4s; }
+.fx-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 1000; overflow: hidden; }
+.fx-confetti i { position: absolute; top: 0; border-radius: 2px; animation: fxConfetti 2.5s linear forwards; }
+
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 650px) {
+    .fx-hero { flex-direction: column; text-align: center; padding: 22px; }
+    .fx-illus { max-width: 70%; }
+    .fx-sticker { font-size: 26px; }
+}
+
+
+/* ---------- ACCESSIBILITY: respect "reduce motion" ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+
+/* ---------- FORGOT PASSWORD LINK ---------- */
+
+.forgot-link {
+    display: block; text-align: center; margin-top: 16px;
+    font-size: 13px; font-weight: 600; color: var(--primary);
+    text-decoration: none; transition: .2s;
+}
+.forgot-link:hover { text-decoration: underline; letter-spacing: .2px; }

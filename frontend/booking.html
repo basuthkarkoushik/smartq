@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>SmartQ - Book Appointment</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="fx.css">
+    <link rel="stylesheet" href="theme.css">
+
+</head>
+
+<body data-page="booking">
+
+    <div id="navbar"></div>
+
+
+    <main class="main">
+
+        <div class="container">
+
+            <h1 class="page-title">
+                Book an Appointment
+            </h1>
+
+            <p class="page-subtitle">
+                Select a service, date and time.
+            </p>
+
+
+            <div class="grid-2">
+
+
+                <!-- FORM -->
+
+                <div class="card">
+
+                    <div class="card-title">
+                        Appointment Details
+                    </div>
+
+                    <div class="card-subtitle">
+                        Fill in the details below.
+                    </div>
+
+
+                    <form id="bookingForm">
+
+
+                        <div class="form-group">
+
+                            <label class="form-label">
+                                Select Service
+                            </label>
+
+                            <select id="service"
+                                    required>
+
+                                <option value="">
+                                    Select Service
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label class="form-label">
+                                Date
+                            </label>
+
+                            <input
+                                type="date"
+                                id="date"
+                                required>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label class="form-label">
+                                Time
+                            </label>
+
+                            <input
+                                type="time"
+                                id="time"
+                                required>
+
+                            <div class="small muted" id="timeHint"></div>
+
+                        </div>
+
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary btn-full">
+
+                            Confirm Appointment
+
+                        </button>
+
+                    </form>
+
+                </div>
+
+
+                <!-- INFORMATION -->
+
+                <div class="card">
+
+                    <div class="card-title">
+                        How SmartQ Works
+                    </div>
+
+                    <div class="card-subtitle">
+                        Simple and convenient queue management.
+                    </div>
+
+
+                    <div class="service-card">
+
+                        <div class="service-icon">
+                            1
+                        </div>
+
+                        <strong>
+                            Book Appointment
+                        </strong>
+
+                        <p class="service-info">
+                            Select the service, date and time.
+                        </p>
+
+                    </div>
+
+                    <br>
+
+
+                    <div class="service-card">
+
+                        <div class="service-icon">
+                            2
+                        </div>
+
+                        <strong>
+                            Get Token
+                        </strong>
+
+                        <p class="service-info">
+                            SmartQ generates a unique queue token.
+                        </p>
+
+                    </div>
+
+                    <br>
+
+
+                    <div class="service-card">
+
+                        <div class="service-icon">
+                            3
+                        </div>
+
+                        <strong>
+                            Track Queue
+                        </strong>
+
+                        <p class="service-info">
+                            See your position and estimated waiting time.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="app.js"></script>
+    <script src="fx.js"></script>
+    <script src="theme.js"></script>
+
+</body>
+
+</html>

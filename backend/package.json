@@ -1,0 +1,7 @@
+{
+  "name": "smartq-backend",
+  "version": "1.0.0",
+  "description": "SmartQ queue management backend (no dependencies)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" }
+}

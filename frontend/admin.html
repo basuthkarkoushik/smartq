@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>SmartQ - Admin</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="fx.css">
+    <link rel="stylesheet" href="theme.css">
+
+</head>
+
+<body data-page="admin">
+
+    <div id="navbar"></div>
+
+
+    <main class="main">
+
+        <div class="container">
+
+            <div class="dashboard-header">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Admin Dashboard
+                    </h1>
+
+                    <p class="page-subtitle">
+                        Manage SmartQ system.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- STATISTICS -->
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Customers
+                    </div>
+
+                    <div class="stat-value"
+                         id="totalUsers">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Services
+                    </div>
+
+                    <div class="stat-value"
+                         id="totalServices">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Appointments
+                    </div>
+
+                    <div class="stat-value"
+                         id="totalAppointments">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Waiting
+                    </div>
+
+                    <div class="stat-value"
+                         id="waitingAppointments">
+                        0
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="grid-2">
+
+
+                <!-- SERVICES -->
+
+                <div class="card">
+
+                    <div class="card-title">
+                        Manage Services
+                    </div>
+
+                    <div class="card-subtitle">
+                        Add or remove SmartQ services.
+                    </div>
+
+
+                    <div class="admin-form">
+
+                        <input
+                            type="text"
+                            id="serviceName"
+                            placeholder="Service name">
+
+                        <input
+                            type="number"
+                            id="serviceDuration"
+                            placeholder="Minutes per appointment">
+
+                        <label class="small muted" for="serviceStart">Available from</label>
+                        <input
+                            type="time"
+                            id="serviceStart"
+                            value="09:00">
+
+                        <label class="small muted" for="serviceEnd">Available until</label>
+                        <input
+                            type="time"
+                            id="serviceEnd"
+                            value="18:00">
+
+                        <label class="small muted" for="serviceCapacity">Max appointments allowed (per day)</label>
+                        <input
+                            type="number"
+                            id="serviceCapacity"
+                            placeholder="e.g. 20"
+                            min="1">
+
+                    </div>
+
+
+                    <button
+                        class="btn btn-primary btn-full"
+                        onclick="addService()">
+
+                        + Add Service
+
+                    </button>
+
+
+                    <br>
+
+
+                    <div id="adminServices">
+
+                    </div>
+
+                </div>
+
+
+                <!-- INFO -->
+
+                <div class="card">
+
+                    <div class="card-title">
+                        Admin Controls
+                    </div>
+
+                    <div class="card-subtitle">
+                        SmartQ management features.
+                    </div>
+
+
+                    <div class="service-card">
+
+                        <div class="service-name">
+                            Service Management
+                        </div>
+
+                        <div class="service-info">
+                            Create and remove available services.
+                        </div>
+
+                    </div>
+
+                    <br>
+
+
+                    <div class="service-card">
+
+                        <div class="service-name">
+                            Appointment Monitoring
+                        </div>
+
+                        <div class="service-info">
+                            View customer appointments and status.
+                        </div>
+
+                    </div>
+
+                    <br>
+
+
+                    <div class="service-card">
+
+                        <div class="service-name">
+                            Queue Monitoring
+                        </div>
+
+                        <div class="service-info">
+                            Monitor active waiting customers.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <br>
+
+
+            <!-- APPOINTMENTS -->
+
+            <div class="card">
+
+                <div class="card-title">
+                    All Appointments
+                </div>
+
+                <div class="card-subtitle">
+                    Monitor all SmartQ bookings.
+                </div>
+
+
+                <div id="adminAppointments">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="app.js"></script>
+    <script src="fx.js"></script>
+    <script src="theme.js"></script>
+
+</body>
+
+</html>

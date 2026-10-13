@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>SmartQ - Staff</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="fx.css">
+    <link rel="stylesheet" href="theme.css">
+
+</head>
+
+<body data-page="staff">
+
+    <div id="navbar"></div>
+
+
+    <main class="main">
+
+        <div class="container">
+
+            <div class="dashboard-header">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Staff Dashboard
+                    </h1>
+
+                    <p class="page-subtitle">
+                        Manage today's queue.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- STATS -->
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Current Token
+                    </div>
+
+                    <div class="stat-value"
+                         id="currentToken">
+                        Q000
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Waiting Customers
+                    </div>
+
+                    <div class="stat-value"
+                         id="waitingCount">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        System Status
+                    </div>
+
+                    <div class="stat-value">
+                        Active
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Staff
+                    </div>
+
+                    <div class="stat-value">
+                        Online
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- QUEUE -->
+
+            <div class="card">
+
+                <div class="card-title">
+                    Today's Queue
+                </div>
+
+                <div class="card-subtitle">
+                    Call, complete or skip customers.
+                </div>
+
+
+                <div id="staffQueue">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="app.js"></script>
+    <script src="fx.js"></script>
+    <script src="theme.js"></script>
+
+</body>
+
+</html>

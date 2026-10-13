@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>SmartQ - Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="fx.css">
+    <link rel="stylesheet" href="theme.css">
+
+</head>
+
+<body data-page="dashboard">
+
+    <div id="navbar"></div>
+
+
+    <main class="main">
+
+        <div class="container">
+
+            <div class="dashboard-header">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Hello, <span id="userName">User</span>
+                    </h1>
+
+                    <p class="page-subtitle">
+                        Manage your appointments and queue.
+                    </p>
+
+                </div>
+
+                <div class="dashboard-header-actions">
+
+                    <a href="booking.html"
+                       class="btn btn-primary">
+                        + Book Appointment
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <!-- STATS -->
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Total Appointments
+                    </div>
+
+                    <div class="stat-value"
+                         id="totalAppointments">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Active Appointments
+                    </div>
+
+                    <div class="stat-value"
+                         id="activeAppointments">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Completed
+                    </div>
+
+                    <div class="stat-value"
+                         id="completedAppointments">
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        Queue System
+                    </div>
+
+                    <div class="stat-value">
+                        Live
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SERVICES -->
+
+            <div class="card">
+
+                <div class="card-title">
+                    Available Services
+                </div>
+
+                <div class="card-subtitle">
+                    Select a service and book your appointment.
+                </div>
+
+                <div id="services"
+                     class="grid-4">
+                </div>
+
+            </div>
+
+
+            <br>
+
+
+            <!-- RECENT -->
+
+            <div class="card">
+
+                <div class="card-title">
+                    Recent Appointments
+                </div>
+
+                <div class="card-subtitle">
+                    Your latest bookings.
+                </div>
+
+                <div id="recentAppointments">
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="app.js"></script>
+    <script src="fx.js"></script>
+    <script src="theme.js"></script>
+
+</body>
+
+</html>

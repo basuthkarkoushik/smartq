@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>SmartQ - Profile</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="fx.css">
+    <link rel="stylesheet" href="theme.css">
+
+</head>
+
+<body data-page="profile">
+
+    <div id="navbar"></div>
+
+
+    <main class="main">
+
+        <div class="container">
+
+            <h1 class="page-title">
+                My Profile
+            </h1>
+
+            <p class="page-subtitle">
+                Manage your SmartQ account.
+            </p>
+
+
+            <div class="grid-2">
+
+
+                <!-- PROFILE -->
+
+                <div class="card">
+
+                    <div class="profile-header">
+
+                        <div class="profile-avatar">
+                            U
+                        </div>
+
+                        <div>
+
+                            <div class="profile-name"
+                                 id="profileName">
+                                User
+                            </div>
+
+                            <div class="profile-email"
+                                 id="profileEmail">
+                                user@email.com
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <p class="muted">
+                        Customer Account
+                    </p>
+
+                </div>
+
+
+                <!-- EDIT -->
+
+                <div class="card">
+
+                    <div class="card-title">
+                        Edit Profile
+                    </div>
+
+                    <br>
+
+
+                    <form id="profileForm">
+
+                        <div class="form-group">
+
+                            <label class="form-label">
+                                Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="nameInput"
+                                required>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label class="form-label">
+                                Email
+                            </label>
+
+                            <input
+                                type="email"
+                                id="emailInput"
+                                required>
+
+                        </div>
+
+
+                        <button
+                            class="btn btn-primary"
+                            type="submit">
+
+                            Save Changes
+
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="app.js"></script>
+    <script src="fx.js"></script>
+    <script src="theme.js"></script>
+
+</body>
+
+</html>
