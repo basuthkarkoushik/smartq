@@ -2,8 +2,9 @@
    SMARTQ - MAIN JAVASCRIPT (connected to the backend)
    ===================================================== */
 
-// Works from http://localhost:3000 or from Live Server / file
-const API_BASE = location.port === "3000" ? "" : "http://localhost:3000";
+// Always use the same origin the page was loaded from (works on
+// localhost during development and on your live Render URL in production).
+const API_BASE = "";
 
 
 /* =====================================================
