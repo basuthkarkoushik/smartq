@@ -2,9 +2,8 @@
    SMARTQ - MAIN JAVASCRIPT (connected to the backend)
    ===================================================== */
 
-// Always use the same origin the page was loaded from (works on
-// localhost during development and on your live Render URL in production).
-const API_BASE = "";
+// Works from http://localhost:3000 or from Live Server / file
+const API_BASE = location.port === "3000" ? "" : "http://localhost:3000";
 
 
 /* =====================================================
@@ -17,7 +16,10 @@ const cache = {
     services: [],
     appointments: [],
     currentToken: "Q000",
-    customerCount: 0
+    currentTokens: {},
+    customerCount: 0,
+    staff: [],
+    staffCode: ""
 };
 
 async function api(url, method = "GET", body = null, silent = false) {
@@ -64,6 +66,9 @@ async function refreshData(silent = false) {
     cache.appointments = data.appointments || [];
     cache.currentToken = data.currentToken || "Q000";
     cache.customerCount = data.customerCount || 0;
+    cache.currentTokens = data.currentTokens || {};
+    cache.staff = data.staff || [];
+    cache.staffCode = data.staffCode || "";
 }
 
 function getServices() {
@@ -144,20 +149,25 @@ async function login(email, password) {
 }
 
 
-async function register(name, email, password, role = "customer", accessCode = "") {
+async function register(name, email, password, role = "customer", accessCode = "", orgName = "") {
 
     if (!name || !email || !password) {
         showMessage("Please fill all fields", "error");
         return;
     }
 
-    if (role !== "customer" && !accessCode) {
-        showMessage("Enter the " + role + " access code", "error");
+    if (role === "staff" && !accessCode) {
+        showMessage("Enter the staff code given by your admin", "error");
+        return;
+    }
+
+    if (role === "admin" && !orgName) {
+        showMessage("Enter your business / clinic name", "error");
         return;
     }
 
     try {
-        await api("/api/register", "POST", { name, email, password, role, accessCode });
+        await api("/api/register", "POST", { name, email, password, role, accessCode, orgName });
     } catch (e) {
         showMessage(e.message, "error");
         return;
@@ -394,7 +404,10 @@ function setupAuth() {
             const accessCode =
                 document.getElementById("registerCode").value;
 
-            register(name, email, password, role, accessCode);
+            const orgEl = document.getElementById("registerOrg");
+            const orgName = orgEl ? orgEl.value : "";
+
+            register(name, email, password, role, accessCode, orgName);
         });
     }
 
@@ -464,6 +477,10 @@ function loadDashboard() {
             </div>
 
             <div class="service-info">
+                <strong>${service.providerName || ""}</strong>
+            </div>
+
+            <div class="service-info">
                 ${service.description}
             </div>
 
@@ -521,8 +538,14 @@ function appointmentHTML(a) {
 
             <div class="appointment-top">
 
-                <div class="appointment-service">
-                    ${a.serviceName}
+                <div>
+                    <div class="appointment-service">
+                        ${a.serviceName}
+                    </div>
+
+                    <div class="small muted">
+                        ${a.providerName || ""}
+                    </div>
                 </div>
 
                 <span class="badge ${badgeClass(a.status)}">
@@ -587,10 +610,20 @@ function loadBooking() {
     select.innerHTML = `
         <option value="">Select Service</option>
 
-        ${services.map(s => `
-            <option value="${s.id}" data-start="${s.startTime}" data-end="${s.endTime}">
-                ${s.name} - ${s.duration} min (${s.startTime} - ${s.endTime})
-            </option>
+        ${Object.entries(
+            services.reduce((groups, s) => {
+                const key = s.providerName || "Other";
+                (groups[key] = groups[key] || []).push(s);
+                return groups;
+            }, {})
+        ).map(([provider, list]) => `
+            <optgroup label="${provider}">
+                ${list.map(s => `
+                    <option value="${s.id}" data-start="${s.startTime}" data-end="${s.endTime}">
+                        ${s.name} - ${s.duration} min (${s.startTime} - ${s.endTime})
+                    </option>
+                `).join("")}
+            </optgroup>
         `).join("")}
     `;
 
@@ -754,14 +787,14 @@ function loadQueue() {
         active.estimatedWait || 0;
 
     const current =
-        getCurrentServing();
+        getCurrentServing(active);
 
     box.innerHTML = `
 
         <div class="card queue-main">
 
             <div class="queue-label">
-                CURRENTLY SERVING
+                CURRENTLY SERVING${active.providerName ? " &middot; " + active.providerName : ""}
             </div>
 
             <div class="current-token">
@@ -834,7 +867,12 @@ function loadQueue() {
 }
 
 
-function getCurrentServing() {
+function getCurrentServing(appt) {
+
+    // customers: the token currently served by THEIR admin; staff/admin: their own queue
+    if (appt && appt.adminId) {
+        return cache.currentTokens[appt.adminId] || "Q000";
+    }
 
     return cache.currentToken || "Q000";
 }
@@ -999,6 +1037,12 @@ function loadStaff() {
     if (!user) return;
 
     createNavbar();
+
+    const staffSub = document.querySelector(".page-subtitle");
+
+    if (staffSub && user.orgName) {
+        staffSub.textContent = "Managing today's queue for " + user.orgName + ".";
+    }
 
     displayStaffQueue();
 
@@ -1166,11 +1210,128 @@ function loadAdmin() {
 
     createNavbar();
 
+    const adminSub = document.querySelector(".page-subtitle");
+
+    if (adminSub && user.orgName) {
+        adminSub.textContent = "Managing " + user.orgName + ".";
+    }
+
+    const orgInput = document.getElementById("orgNameInput");
+
+    if (orgInput && !orgInput.value) orgInput.value = user.orgName || "";
+
     updateAdminStats();
 
     displayAdminServices();
 
+    displayAdminStaff();
+
     displayAdminAppointments();
+}
+
+
+function displayAdminStaff() {
+
+    const codeBox = document.getElementById("staffCode");
+
+    if (codeBox) codeBox.textContent = cache.staffCode || "-";
+
+    const box = document.getElementById("adminStaff");
+
+    if (!box) return;
+
+    if (!cache.staff.length) {
+
+        box.innerHTML = `
+            <div class="empty-state">
+                No staff yet. Share your staff code so they can register.
+            </div>
+        `;
+
+        return;
+    }
+
+    box.innerHTML = cache.staff.map(member => `
+
+        <div class="queue-row">
+
+            <div>
+                <strong>${member.name}</strong>
+
+                <div class="small muted">
+                    ${member.email}
+                </div>
+            </div>
+
+            <button
+                class="btn btn-danger btn-small"
+                onclick="removeStaff('${member.id}')">
+                Remove
+            </button>
+
+        </div>
+
+    `).join("");
+}
+
+
+async function saveOrgName() {
+
+    const orgName = document.getElementById("orgNameInput").value;
+
+    if (!orgName.trim()) {
+        showMessage("Enter your business / clinic name", "error");
+        return;
+    }
+
+    try {
+        const data = await api("/api/org", "PUT", { orgName });
+        saveCurrentUser(data.user);
+        await refreshData();
+    } catch (e) {
+        showMessage(e.message, "error");
+        return;
+    }
+
+    showMessage("Business name saved");
+
+    loadAdmin();
+}
+
+
+async function regenerateStaffCode() {
+
+    if (!confirm("Generate a new staff code? The old code will stop working for new sign-ups.")) return;
+
+    try {
+        await api("/api/staff-code", "POST");
+        await refreshData();
+    } catch (e) {
+        showMessage(e.message, "error");
+        return;
+    }
+
+    showMessage("New staff code generated");
+
+    displayAdminStaff();
+}
+
+
+async function removeStaff(id) {
+
+    if (!confirm("Remove this staff member? Their account will be deleted.")) return;
+
+    try {
+        await api("/api/staff/" + id, "DELETE");
+        await refreshData();
+    } catch (e) {
+        showMessage(e.message, "error");
+        return;
+    }
+
+    showMessage("Staff member removed");
+
+    displayAdminStaff();
 }
 
 

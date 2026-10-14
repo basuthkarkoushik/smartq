@@ -203,16 +203,33 @@
 
 
                         <div class="form-group hidden"
-                             id="codeGroup">
+                             id="orgGroup">
 
                             <label class="form-label">
-                                Access Code
+                                Business / Clinic Name
                             </label>
 
                             <input
-                                type="password"
+                                type="text"
+                                id="registerOrg"
+                                placeholder="e.g. Dr. Rao's Clinic">
+
+                        </div>
+
+
+                        <div class="form-group hidden"
+                             id="codeGroup">
+
+                            <label class="form-label"
+                                   id="codeLabel">
+                                Staff Code
+                            </label>
+
+                            <input
+                                type="text"
                                 id="registerCode"
-                                placeholder="Staff / Admin access code">
+                                autocomplete="off"
+                                placeholder="Code given by your admin">
 
                         </div>
 
@@ -363,8 +380,20 @@
                 document.getElementById("registerRole").value;
 
             document
+                .getElementById("orgGroup")
+                .classList.toggle("hidden", role !== "admin");
+
+            document
                 .getElementById("codeGroup")
                 .classList.toggle("hidden", role === "customer");
+
+            document.getElementById("codeLabel").textContent =
+                role === "admin" ? "Admin Invite Code" : "Staff Code";
+
+            document.getElementById("registerCode").placeholder =
+                role === "admin"
+                    ? "Leave empty unless your site requires one"
+                    : "Code given by your admin";
         }
 
 

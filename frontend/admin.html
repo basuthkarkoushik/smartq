@@ -173,28 +173,43 @@
                 </div>
 
 
-                <!-- INFO -->
+                <!-- STAFF -->
 
                 <div class="card">
 
                     <div class="card-title">
-                        Admin Controls
+                        Your Staff
                     </div>
 
                     <div class="card-subtitle">
-                        SmartQ management features.
+                        Staff who join with your code can only see and manage your queue.
                     </div>
 
 
                     <div class="service-card">
 
                         <div class="service-name">
-                            Service Management
+                            Business / clinic name
                         </div>
 
                         <div class="service-info">
-                            Create and remove available services.
+                            Customers see this name next to your services.
                         </div>
+
+                        <br>
+
+                        <input
+                            type="text"
+                            id="orgNameInput"
+                            placeholder="e.g. Dr. Rao's Clinic">
+
+                        <br><br>
+
+                        <button
+                            class="btn btn-primary btn-small"
+                            onclick="saveOrgName()">
+                            Save name
+                        </button>
 
                     </div>
 
@@ -204,27 +219,32 @@
                     <div class="service-card">
 
                         <div class="service-name">
-                            Appointment Monitoring
+                            Staff sign-up code
                         </div>
 
                         <div class="service-info">
-                            View customer appointments and status.
+                            <strong id="staffCode"
+                                    style="font-size:22px; letter-spacing:2px;">-</strong>
                         </div>
+
+                        <div class="service-info">
+                            Give this code to your staff. They choose "Staff" on the
+                            Register tab and enter it.
+                        </div>
+
+                        <br>
+
+                        <button
+                            class="btn btn-secondary btn-small"
+                            onclick="regenerateStaffCode()">
+                            Generate new code
+                        </button>
 
                     </div>
 
                     <br>
 
-
-                    <div class="service-card">
-
-                        <div class="service-name">
-                            Queue Monitoring
-                        </div>
-
-                        <div class="service-info">
-                            Monitor active waiting customers.
-                        </div>
+                    <div id="adminStaff">
 
                     </div>
 
@@ -241,11 +261,11 @@
             <div class="card">
 
                 <div class="card-title">
-                    All Appointments
+                    Your Appointments
                 </div>
 
                 <div class="card-subtitle">
-                    Monitor all SmartQ bookings.
+                    Bookings made for your services.
                 </div>
 
 
