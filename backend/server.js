@@ -1,6 +1,8 @@
 /* =====================================================
    SMARTQ BACKEND
-   Pure Node.js (no npm install needed) + built-in SQLite.
+   Pure Node.js (only dependency: pg, the Postgres driver)
+   Uses a free hosted Postgres database (e.g. Neon) so data
+   survives restarts and redeploys on a free host.
    Run:  node server.js     Open:  http://localhost:3000
    ===================================================== */
 
@@ -10,7 +12,7 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
-const { DatabaseSync } = require("node:sqlite");
+const { Pool } = require("pg");
 
 const PORT = process.env.PORT || 3000;
 const FRONTEND = path.join(__dirname, "..", "frontend");
@@ -22,83 +24,91 @@ const ACCESS_CODES = {
     admin: process.env.ADMIN_CODE || "ADMIN2026"
 };
 
+if (!process.env.DATABASE_URL) {
+    console.error("Missing DATABASE_URL environment variable. Set it to your Postgres connection string.");
+    process.exit(1);
+}
+
 
 /* ---------- DATABASE ---------- */
 
-const db = new DatabaseSync(path.join(__dirname, "smartq.db"));
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    // Hosted Postgres providers (Neon, Render, Supabase, ...) require SSL;
+    // rejectUnauthorized:false accepts their managed certificates.
+    ssl: { rejectUnauthorized: false }
+});
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'customer'
-    );
-    CREATE TABLE IF NOT EXISTS services (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        duration INTEGER NOT NULL,
-        description TEXT DEFAULT 'SmartQ service',
-        start_time TEXT NOT NULL DEFAULT '09:00',
-        end_time TEXT NOT NULL DEFAULT '18:00',
-        capacity INTEGER NOT NULL DEFAULT 50
-    );
-    CREATE TABLE IF NOT EXISTS appointments (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        service_id TEXT NOT NULL,
-        service_name TEXT NOT NULL,
-        duration INTEGER NOT NULL,
-        date TEXT NOT NULL,
-        time TEXT NOT NULL,
-        token TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'Waiting',
-        created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS resets (
-        email TEXT PRIMARY KEY,
-        code_hash TEXT NOT NULL,
-        expires INTEGER NOT NULL,
-        attempts INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT
-    );
-`);
-
-// Migration: add the new service-window/capacity columns if this is an
-// existing database created before this feature existed.
-const serviceColumns = db.prepare("PRAGMA table_info(services)").all().map(c => c.name);
-if (!serviceColumns.includes("start_time")) {
-    db.exec("ALTER TABLE services ADD COLUMN start_time TEXT NOT NULL DEFAULT '09:00'");
-}
-if (!serviceColumns.includes("end_time")) {
-    db.exec("ALTER TABLE services ADD COLUMN end_time TEXT NOT NULL DEFAULT '18:00'");
-}
-if (!serviceColumns.includes("capacity")) {
-    db.exec("ALTER TABLE services ADD COLUMN capacity INTEGER NOT NULL DEFAULT 50");
+// q(text, params) runs a query and returns the rows array.
+async function q(text, params = []) {
+    const result = await pool.query(text, params);
+    return result.rows;
 }
 
-function getSetting(key) {
-    const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
+// one(text, params) returns the first row, or null.
+async function one(text, params = []) {
+    const rows = await q(text, params);
+    return rows[0] || null;
+}
+
+async function initDb() {
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'customer'
+        );
+        CREATE TABLE IF NOT EXISTS services (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            duration INTEGER NOT NULL,
+            description TEXT DEFAULT 'SmartQ service',
+            start_time TEXT NOT NULL DEFAULT '09:00',
+            end_time TEXT NOT NULL DEFAULT '18:00',
+            capacity INTEGER NOT NULL DEFAULT 50
+        );
+        CREATE TABLE IF NOT EXISTS appointments (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            service_id TEXT NOT NULL,
+            service_name TEXT NOT NULL,
+            duration INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            token TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Waiting',
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS resets (
+            email TEXT PRIMARY KEY,
+            code_hash TEXT NOT NULL,
+            expires BIGINT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+    `);
+}
+
+async function getSetting(key) {
+    const row = await one("SELECT value FROM settings WHERE key = $1", [key]);
     return row ? row.value : null;
 }
 
-function setSetting(key, value) {
-    db.prepare(
-        "INSERT INTO settings (key, value) VALUES (?, ?) " +
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-    ).run(key, value);
+async function setSetting(key, value) {
+    await q(
+        `INSERT INTO settings (key, value) VALUES ($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+        [key, value]
+    );
 }
 
-let SECRET = getSetting("secret");
-if (!SECRET) {
-    SECRET = crypto.randomBytes(32).toString("hex");
-    setSetting("secret", SECRET);
-}
-if (getSetting("current_token") === null) setSetting("current_token", "Q000");
+let SECRET;
 
 
 /* ---------- PASSWORDS + LOGIN TOKENS ---------- */
@@ -126,7 +136,7 @@ function makeToken(user) {
     return body + "." + sign(body);
 }
 
-function userFromRequest(req) {
+async function userFromRequest(req) {
     const header = req.headers.authorization || "";
     const [body, sig] = header.replace("Bearer ", "").split(".");
 
@@ -139,9 +149,10 @@ function userFromRequest(req) {
     try {
         const payload = JSON.parse(Buffer.from(body, "base64url").toString());
         if (payload.exp < Date.now()) return null;
-        return db.prepare(
-            "SELECT id, name, email, role FROM users WHERE id = ?"
-        ).get(payload.id) || null;
+        return await one(
+            "SELECT id, name, email, role FROM users WHERE id = $1",
+            [payload.id]
+        );
     } catch (e) {
         return null;
     }
@@ -150,24 +161,50 @@ function userFromRequest(req) {
 
 /* ---------- DEMO DATA (only on first run) ---------- */
 
-const insertUser = db.prepare(
-    "INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)"
-);
-
-if (!db.prepare("SELECT 1 FROM users LIMIT 1").get()) {
-    insertUser.run("admin001", "SmartQ Admin", "admin@smartq.com", hashPassword("admin123"), "admin");
-    insertUser.run("staff001", "SmartQ Staff", "staff@smartq.com", hashPassword("staff123"), "staff");
+async function insertUser(id, name, email, password, role) {
+    await q(
+        "INSERT INTO users (id, name, email, password, role) VALUES ($1, $2, $3, $4, $5)",
+        [id, name, email, password, role]
+    );
 }
 
-if (!db.prepare("SELECT 1 FROM services LIMIT 1").get()) {
-    const ins = db.prepare(
-        `INSERT INTO services (id, name, duration, description, start_time, end_time, capacity)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-    );
-    ins.run("S001", "General Consultation", 15, "General consultation and assistance", "09:00", "18:00", 50);
-    ins.run("S002", "Document Verification", 10, "Document checking and verification", "09:00", "18:00", 50);
-    ins.run("S003", "Customer Support", 15, "Customer support and help", "09:00", "18:00", 50);
-    ins.run("S004", "Account Services", 20, "Account related services", "09:00", "18:00", 50);
+async function seedDemoData() {
+
+    const hasUsers = await one("SELECT 1 FROM users LIMIT 1");
+
+    if (!hasUsers) {
+        await insertUser("admin001", "SmartQ Admin", "admin@smartq.com", hashPassword("admin123"), "admin");
+        await insertUser("staff001", "SmartQ Staff", "staff@smartq.com", hashPassword("staff123"), "staff");
+    }
+
+    const hasServices = await one("SELECT 1 FROM services LIMIT 1");
+
+    if (!hasServices) {
+
+        const ins = async (id, name, duration, description, startTime, endTime, capacity) => {
+            await q(
+                `INSERT INTO services (id, name, duration, description, start_time, end_time, capacity)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [id, name, duration, description, startTime, endTime, capacity]
+            );
+        };
+
+        await ins("S001", "General Consultation", 15, "General consultation and assistance", "09:00", "18:00", 50);
+        await ins("S002", "Document Verification", 10, "Document checking and verification", "09:00", "18:00", 50);
+        await ins("S003", "Customer Support", 15, "Customer support and help", "09:00", "18:00", 50);
+        await ins("S004", "Account Services", 20, "Account related services", "09:00", "18:00", 50);
+    }
+
+    let secret = await getSetting("secret");
+    if (!secret) {
+        secret = crypto.randomBytes(32).toString("hex");
+        await setSetting("secret", secret);
+    }
+    SECRET = secret;
+
+    if ((await getSetting("current_token")) === null) {
+        await setSetting("current_token", "Q000");
+    }
 }
 
 
@@ -210,33 +247,36 @@ function readBody(req) {
 }
 
 const APPT_SQL = `
-    SELECT id,
-           user_id AS userId,
-           (SELECT name FROM users WHERE id = user_id) AS userName,
-           service_id AS serviceId,
-           service_name AS serviceName,
-           duration, date, time, token, status,
-           created_at AS createdAt
-    FROM appointments
+    SELECT a.id,
+           a.user_id AS "userId",
+           (SELECT name FROM users WHERE id = a.user_id) AS "userName",
+           a.service_id AS "serviceId",
+           a.service_name AS "serviceName",
+           a.duration, a.date, a.time, a.token, a.status,
+           a.created_at AS "createdAt"
+    FROM appointments a
 `;
 
-function buildState(user) {
+async function buildState(user) {
 
-    const services = db.prepare(
+    const services = await q(
         `SELECT id, name, duration, description,
-                start_time AS startTime, end_time AS endTime, capacity
-         FROM services ORDER BY rowid`
-    ).all();
+                start_time AS "startTime", end_time AS "endTime", capacity
+         FROM services ORDER BY name`
+    );
 
     if (user.role === "admin") {
-        services.forEach(s => {
-            s.bookedToday = db.prepare(
-                "SELECT COUNT(*) AS c FROM appointments WHERE service_id = ? AND date = ? AND status != 'Cancelled'"
-            ).get(s.id, todayString()).c;
-        });
+        const today = todayString();
+        for (const s of services) {
+            const row = await one(
+                "SELECT COUNT(*) AS c FROM appointments WHERE service_id = $1 AND date = $2 AND status != 'Cancelled'",
+                [s.id, today]
+            );
+            s.bookedToday = parseInt(row.c, 10);
+        }
     }
 
-    const all = db.prepare(APPT_SQL + " ORDER BY created_at, rowid").all();
+    const all = await q(APPT_SQL + " ORDER BY a.created_at, a.id");
 
     let appointments = all;
 
@@ -267,20 +307,19 @@ function buildState(user) {
     const state = {
         services,
         appointments,
-        currentToken: getSetting("current_token")
+        currentToken: await getSetting("current_token")
     };
 
     if (user.role === "admin") {
-        state.customerCount = db.prepare(
-            "SELECT COUNT(*) AS c FROM users WHERE role = 'customer'"
-        ).get().c;
+        const row = await one("SELECT COUNT(*) AS c FROM users WHERE role = 'customer'");
+        state.customerCount = parseInt(row.c, 10);
     }
 
     return state;
 }
 
-function findAppointment(id) {
-    const row = db.prepare("SELECT * FROM appointments WHERE id = ?").get(id);
+async function findAppointment(id) {
+    const row = await one("SELECT * FROM appointments WHERE id = $1", [id]);
     if (!row) throw new HttpError(404, "Appointment not found");
     return row;
 }
@@ -311,11 +350,11 @@ async function handleApi(req, res, url) {
         if (!/^\S+@\S+\.\S+$/.test(email)) throw new HttpError(400, "Enter a valid email");
         if (password.length < 6) throw new HttpError(400, "Password must be at least 6 characters");
 
-        if (db.prepare("SELECT 1 FROM users WHERE email = ?").get(email)) {
+        if (await one("SELECT 1 FROM users WHERE email = $1", [email])) {
             throw new HttpError(400, "Email already registered");
         }
 
-        insertUser.run("U" + Date.now(), name, email, hashPassword(password), role);
+        await insertUser("U" + Date.now(), name, email, hashPassword(password), role);
 
         return { ok: true };
     }
@@ -323,7 +362,7 @@ async function handleApi(req, res, url) {
     if (method === "POST" && p === "/api/login") {
 
         const email = clean(body.email).toLowerCase();
-        const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+        const row = await one("SELECT * FROM users WHERE email = $1", [email]);
 
         if (!row || !checkPassword(String(body.password || ""), row.password)) {
             throw new HttpError(401, "Invalid email or password");
@@ -336,7 +375,7 @@ async function handleApi(req, res, url) {
 
     if (method === "PUT" && p === "/api/profile") {
 
-        const user = userFromRequest(req);
+        const user = await userFromRequest(req);
         requireLogin(user);
 
         const name = clean(body.name);
@@ -344,10 +383,10 @@ async function handleApi(req, res, url) {
 
         if (!name || !/^\S+@\S+\.\S+$/.test(email)) throw new HttpError(400, "Enter a valid name and email");
 
-        const taken = db.prepare("SELECT id FROM users WHERE email = ? AND id != ?").get(email, user.id);
+        const taken = await one("SELECT id FROM users WHERE email = $1 AND id != $2", [email, user.id]);
         if (taken) throw new HttpError(400, "Email already used by another account");
 
-        db.prepare("UPDATE users SET name = ?, email = ? WHERE id = ?").run(name, email, user.id);
+        await q("UPDATE users SET name = $1, email = $2 WHERE id = $3", [name, email, user.id]);
 
         return { user: { id: user.id, name, email, role: user.role } };
     }
@@ -358,17 +397,18 @@ async function handleApi(req, res, url) {
 
         const email = clean(body.email).toLowerCase();
 
-        if (db.prepare("SELECT 1 FROM users WHERE email = ?").get(email)) {
+        if (await one("SELECT 1 FROM users WHERE email = $1", [email])) {
 
             const code = String(crypto.randomInt(100000, 1000000));
 
-            db.prepare(
-                `INSERT INTO resets (email, code_hash, expires, attempts) VALUES (?, ?, ?, 0)
-                 ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash,
-                 expires = excluded.expires, attempts = 0`
-            ).run(email, sha(code), Date.now() + 10 * 60 * 1000);
+            await q(
+                `INSERT INTO resets (email, code_hash, expires, attempts) VALUES ($1, $2, $3, 0)
+                 ON CONFLICT (email) DO UPDATE SET code_hash = excluded.code_hash,
+                 expires = excluded.expires, attempts = 0`,
+                [email, sha(code), Date.now() + 10 * 60 * 1000]
+            );
 
-            // No email service is connected, so the code is shown here in the server terminal.
+            // No email service is connected, so the code is shown here in the server logs.
             console.log("\n[PASSWORD RESET]  " + email + "  ->  code: " + code + "  (valid 10 minutes)\n");
         }
 
@@ -383,26 +423,26 @@ async function handleApi(req, res, url) {
 
         if (password.length < 6) throw new HttpError(400, "Password must be at least 6 characters");
 
-        const row = db.prepare("SELECT * FROM resets WHERE email = ?").get(email);
+        const row = await one("SELECT * FROM resets WHERE email = $1", [email]);
 
-        if (!row || row.expires < Date.now() || row.attempts >= 5) {
+        if (!row || Number(row.expires) < Date.now() || row.attempts >= 5) {
             throw new HttpError(400, "Reset code expired. Please request a new one");
         }
 
         if (!crypto.timingSafeEqual(Buffer.from(sha(code)), Buffer.from(row.code_hash))) {
-            db.prepare("UPDATE resets SET attempts = attempts + 1 WHERE email = ?").run(email);
+            await q("UPDATE resets SET attempts = attempts + 1 WHERE email = $1", [email]);
             throw new HttpError(400, "Incorrect reset code");
         }
 
-        db.prepare("UPDATE users SET password = ? WHERE email = ?").run(hashPassword(password), email);
-        db.prepare("DELETE FROM resets WHERE email = ?").run(email);
+        await q("UPDATE users SET password = $1 WHERE email = $2", [hashPassword(password), email]);
+        await q("DELETE FROM resets WHERE email = $1", [email]);
 
         return { ok: true };
     }
 
     /* ----- everything below needs login ----- */
 
-    const user = userFromRequest(req);
+    const user = await userFromRequest(req);
     requireLogin(user);
 
     if (method === "GET" && p === "/api/state") {
@@ -434,10 +474,11 @@ async function handleApi(req, res, url) {
             throw new HttpError(400, "Enter a valid number of appointments allowed (1-1000)");
         }
 
-        db.prepare(
+        await q(
             `INSERT INTO services (id, name, duration, description, start_time, end_time, capacity)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
-        ).run("S" + Date.now(), name, duration, "SmartQ service", startTime, endTime, capacity);
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            ["S" + Date.now(), name, duration, "SmartQ service", startTime, endTime, capacity]
+        );
 
         return { ok: true };
     }
@@ -446,7 +487,7 @@ async function handleApi(req, res, url) {
 
     if (method === "DELETE" && match) {
         requireLogin(user, ["admin"]);
-        db.prepare("DELETE FROM services WHERE id = ?").run(match[1]);
+        await q("DELETE FROM services WHERE id = $1", [match[1]]);
         return { ok: true };
     }
 
@@ -456,7 +497,7 @@ async function handleApi(req, res, url) {
 
         requireLogin(user, ["customer"]);
 
-        const service = db.prepare("SELECT * FROM services WHERE id = ?").get(String(body.serviceId || ""));
+        const service = await one("SELECT * FROM services WHERE id = $1", [String(body.serviceId || "")]);
         const date = String(body.date || "");
         const time = String(body.time || "");
 
@@ -473,23 +514,26 @@ async function handleApi(req, res, url) {
             );
         }
 
-        const bookedForService = db.prepare(
-            "SELECT COUNT(*) AS c FROM appointments WHERE service_id = ? AND date = ? AND status != 'Cancelled'"
-        ).get(service.id, date).c;
+        const bookedRow = await one(
+            "SELECT COUNT(*) AS c FROM appointments WHERE service_id = $1 AND date = $2 AND status != 'Cancelled'",
+            [service.id, date]
+        );
+        const bookedForService = parseInt(bookedRow.c, 10);
 
         if (bookedForService >= service.capacity) {
             throw new HttpError(400, `${service.name} is fully booked for ${date}. Please choose another date.`);
         }
 
-        const count = db.prepare("SELECT COUNT(*) AS c FROM appointments WHERE date = ?").get(date).c;
-        const token = "Q" + String(count + 1).padStart(3, "0");
+        const countRow = await one("SELECT COUNT(*) AS c FROM appointments WHERE date = $1", [date]);
+        const token = "Q" + String(parseInt(countRow.c, 10) + 1).padStart(3, "0");
         const id = "A" + Date.now() + crypto.randomBytes(2).toString("hex");
 
-        db.prepare(
+        await q(
             `INSERT INTO appointments
              (id, user_id, service_id, service_name, duration, date, time, token, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Waiting', ?)`
-        ).run(id, user.id, service.id, service.name, service.duration, date, time, token, new Date().toISOString());
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Waiting', $9)`,
+            [id, user.id, service.id, service.name, service.duration, date, time, token, new Date().toISOString()]
+        );
 
         return { id, token };
     }
@@ -498,7 +542,7 @@ async function handleApi(req, res, url) {
 
     if (method === "PUT" && match) {
 
-        const appt = findAppointment(match[1]);
+        const appt = await findAppointment(match[1]);
         const action = match[2];
 
         if (action === "cancel") {
@@ -511,17 +555,17 @@ async function handleApi(req, res, url) {
                 throw new HttpError(400, "Appointment is already closed");
             }
 
-            db.prepare("UPDATE appointments SET status = 'Cancelled' WHERE id = ?").run(appt.id);
+            await q("UPDATE appointments SET status = 'Cancelled' WHERE id = $1", [appt.id]);
             return { ok: true };
         }
 
         requireLogin(user, ["staff", "admin"]);
 
         if (action === "call") {
-            db.prepare("UPDATE appointments SET status = 'Called' WHERE id = ?").run(appt.id);
-            setSetting("current_token", appt.token);
+            await q("UPDATE appointments SET status = 'Called' WHERE id = $1", [appt.id]);
+            await setSetting("current_token", appt.token);
         } else {
-            db.prepare("UPDATE appointments SET status = 'Completed' WHERE id = ?").run(appt.id);
+            await q("UPDATE appointments SET status = 'Completed' WHERE id = $1", [appt.id]);
         }
 
         return { ok: true };
@@ -596,6 +640,16 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
-server.listen(PORT, () => {
-    console.log("SmartQ is running  ->  http://localhost:" + PORT);
+async function start() {
+    await initDb();
+    await seedDemoData();
+
+    server.listen(PORT, () => {
+        console.log("SmartQ is running  ->  http://localhost:" + PORT);
+    });
+}
+
+start().catch(err => {
+    console.error("Failed to start SmartQ:", err);
+    process.exit(1);
 });

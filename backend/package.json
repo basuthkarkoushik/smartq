@@ -1,7 +1,12 @@
 {
   "name": "smartq-backend",
   "version": "1.0.0",
-  "description": "SmartQ queue management backend (no dependencies)",
+  "description": "SmartQ queue management backend (Postgres)",
   "main": "server.js",
-  "scripts": { "start": "node server.js" }
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
 }
